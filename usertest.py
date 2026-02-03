@@ -114,45 +114,15 @@ if not st.session_state.user_logged_in:
 # --- 入力コンポーネント ---
 # ===============================
 def product_row(label: str, key: str):
-    """商品別の入力行を定義に基づき生成"""
-    st.write(f"### {label}")
-    spec = product_specs.get(key, {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]})
-
-    # 数量（共通）
-    qty = st.selectbox("数量", range(11), key=f"{key}_qty")
-    item_type = None
-    if "types" in spec:
-        item_type = st.selectbox(
-            "タイプ", 
-            spec["types"], 
-            index=0,  # 0番目（Aタイプ）を初期選択にする
-            key=f"{key}_type"
-        )
-    # 種別ごとに追加フィールド
-    if spec["type"] == "pants":
-        waist_min, waist_max, waist_step = spec.get("waist_range", (61,111,3))
-        waist_choices = list(range(waist_min, waist_max, waist_step))
-        waist = st.selectbox("ウエスト", waist_choices, index=None, key=f"{key}_waist", format_func=lambda x: "" if x is None else str(x))
-        length = st.text_input("丈", key=f"{key}_length", placeholder=spec.get("length_placeholder", "丈を入力"))
-        memo = st.text_input("備考", key=f"{key}_memo", placeholder="備考を入力")
-        return {"qty": qty, "waist": waist, "length": length, "memo": memo}
-
-    elif spec["type"] == "qty_memo":
-        memo = st.text_input("備考", key=f"{key}_memo", placeholder="備考を入力")
-        return {"qty": qty, "memo": memo}
-
-    else:  # "qty_size_memo"
-        size_opt = spec.get("size_options", ["S","M","L","XL"])
-        if isinstance(size_opt, dict) and "range" in size_opt:
-            mn, mx, step = size_opt["range"]
-            size_choices = list(range(mn, mx, step))
-            size = st.selectbox("サイズ", size_choices, index=None, key=f"{key}_size", format_func=lambda x: "" if x is None else str(x))
-        elif size_opt == "free_text":
-            size = st.text_input("サイズ", key=f"{key}_size", placeholder="サイズを入力")
-        else:
-            size = st.selectbox("サイズ", size_opt, index=None, key=f"{key}_size", format_func=lambda x: "" if x is None else str(x))
-        memo = st.text_input("備考", key=f"{key}_memo", placeholder="備考を入力")
-        return {"qty": qty, "size": size, "memo": memo}
+    """客側：商品タイトルと数量選択だけを表示"""
+    st.markdown(f"### {label}")
+    
+    # 数量だけを選択（0〜10個など）
+    qty = st.selectbox(
+        "数量を選択してください", 
+        options=list(range(11)), 
+        key=f"cust_qty_{key}"
+    )
 
 # ===============================
 # --- 入力画面 ---
