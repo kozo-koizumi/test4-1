@@ -87,10 +87,11 @@ if mode == "採寸入力":
         #        for s in summary: st.write(s)
 
         # 各商品ごとの入力と保存
+        items = order.get("items") or {}
         for key, spec in product_specs.items():
             # 取得した値を int() で数値に変換する（Noneや空文字対策で or 0 を入れる）
             try:
-                qty = int(order.get(key) or 0)
+                qty = int(items.get(key, 0))
             except ValueError:
                 qty = 0
             
