@@ -23,13 +23,18 @@ if not st.session_state.logged_in:
     st.title("管理者ログイン")
     user_input = st.text_input("ユーザーID")
     pass_input = st.text_input("パスワード", type="password")
+    
     if st.button("ログイン"):
         if user_input == ADMIN_ID and pass_input == ADMIN_PASSWORD:
             st.session_state.logged_in = True
-            st.experimental_rerun()
+            # rerun は不要
         else:
             st.error("ログイン失敗")
-    st.stop()
+    
+    # ログインしていない場合はここで画面停止
+    if not st.session_state.logged_in:
+        st.stop()
+
 
 # ===============================
 # --- 3. メインメニュー ---
