@@ -1,8 +1,6 @@
 import streamlit as st
 import requests
 from supabase import create_client, Client
-#from streamlit_autorefresh import st_autorefresh
-import time
 
 # ===============================
 # --- Supabase設定 ---
@@ -20,7 +18,6 @@ FIXED_PASSWORD = st.secrets["PASSWORD"]
 # ===============================
 # --- 商品マスタ ---
 # ===============================
-# ※価格は仮（必要に応じて調整してください）
 products = {
     "blazer":       {"label": "ブレザー",                "price": 12000},
     "shirt":        {"label": "シャツ",                  "price": 2000},
@@ -33,33 +30,6 @@ products = {
     "pe_halfpants": {"label": "体操服（ハーフパンツ）",  "price": 2000},
     "pe_jacket":    {"label": "体操服（ジャージ上着）",  "price": 5000},
     "pe_pants":     {"label": "体操服（パンツ）",        "price": 3800},
-}
-
-# ===============================
-# --- 入力仕様（商品別フォーム定義） ---
-# ===============================
-# type:
-#  - "qty_size_memo": 数量 + サイズ + 備考
-#  - "pants":         数量 + ウエスト + 丈 + 備考
-#  - "qty_memo":      数量 + 備考（サイズ不要）
-# size_options:
-#  - リストの場合: セレクトボックス
-#  - "free_text":     自由入力
-#  - 数値レンジ:      {"range": (min, max, step)} でセレクトボックス
-product_specs = {
-    "blazer":       {"type": "qty_size_memo", 
-                     "size_options": ["S","M","L","XL"],
-                     "types": ["Aタイプ", "Bタイプ"]},
-    "shirt":        {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
-    "pants":        {"type": "pants",         "waist_range": (61, 111, 3), "length_placeholder": "72"},
-    "vest":         {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
-    "sweater":      {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
-    "necktie":      {"type": "qty_memo"},
-    "sandals":      {"type": "qty_size_memo", "size_options": {"range": (22, 31, 1)}},  # 例: 22〜30cm
-    "pe_shirt":     {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
-    "pe_halfpants": {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
-    "pe_jacket":    {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
-    "pe_pants":     {"type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
 }
 
 st.set_page_config(page_title="注文登録", layout="wide")
@@ -111,20 +81,12 @@ if not st.session_state.user_logged_in:
     st.stop()
 
 # ===============================
-# --- 入力コンポーネント ---
+# --- 商品入力コンポーネント ---
 # ===============================
 def product_row(label: str, key: str):
     st.markdown(f"### {label}")
-    
-    qty = st.selectbox(
-        "数量を選択してください", 
-        options=list(range(11)), 
-        key=f"cust_qty_{key}"
-    )
-
-    return {
-        "qty": qty
-    }
+    qty = st.selectbox("数量を選択してください", options=list(range(11)), key=f"cust_qty_{key}")
+    return {"qty": qty}
 
 # ===============================
 # --- 入力画面 ---
@@ -139,7 +101,7 @@ if st.session_state.phase == "input":
     # --- お客様情報 ---
     st.write("### 1. お客様情報")
     name = st.text_input("お名前（必須）", value=st.session_state.order_data.get("name", ""))
-    zipcode = st.text_input("郵便番号(必須)  ハイフンなしで入力", value=st.session_state.order_data.get("zipcode",""), max_chars=7,placeholder="例: 6068275")
+    zipcode = st.text_input("郵便番号(必須)  ハイフンなしで入力", value=st.session_state.order_data.get("zipcode",""), max_chars=7, placeholder="例: 6068275")
 
     if st.button("住所検索"):
         clean_zip = zipcode.replace("-", "").replace(" ", "")
@@ -150,15 +112,12 @@ if st.session_state.phase == "input":
                 st.session_state.address_input = r["address1"] + r["address2"] + r["address3"]
             else:
                 st.warning("該当する住所が見つかりませんでした。")
-        except Exception as e:
+        except:
             st.error("住所検索に失敗しました。時間をおいて再度お試しください。")
 
-    address = st.text_input(
-        "住所（必須）",
-        value=st.session_state.get("address_input", st.session_state.order_data.get("address",""))
-    )
-    phone = st.text_input("電話番号（任意）", value=st.session_state.order_data.get("phone",""), placeholder="例: 0750010001")
-    email = st.text_input("メールアドレス（任意）", value=st.session_state.order_data.get("email",""),placeholder="例: taro@outlook.jp")
+    address = st.text_input("住所（必須）", value=st.session_state.get("address_input", st.session_state.order_data.get("address","")))
+    phone = st.text_input("電話番号（任意）", value=st.session_state.order_data.get("phone",""))
+    email = st.text_input("メールアドレス（任意）", value=st.session_state.order_data.get("email",""))
 
     st.divider()
     st.write("### 2. 商品選択")
@@ -169,10 +128,7 @@ if st.session_state.phase == "input":
         order_data[key] = product_row(info["label"], key)
 
     # --- 合計金額計算 ---
-    total_price = 0
-    for key, info in products.items():
-        qty = order_data[key].get("qty", 0) or 0
-        total_price += qty * info["price"]
+    total_price = sum(order_data[k]["qty"] * products[k]["price"] for k in products)
 
     st.markdown(f"<div class='total-box'>合計金額：{total_price:,} 円</div>", unsafe_allow_html=True)
 
@@ -186,7 +142,7 @@ if st.session_state.phase == "input":
                 "address": address,
                 "phone": phone,
                 "email": email,
-                **order_data,
+                "items": {k: order_data[k]["qty"] for k in products},
                 "total_price": total_price
             }
             st.session_state.phase = "confirm"
@@ -208,45 +164,21 @@ elif st.session_state.phase == "confirm":
         st.write(f"電話番号: {data.get('phone','未入力')}")
         st.write(f"メール: {data.get('email','未入力')}")
 
-    def format_item_line(pkey: str, item: dict) -> str:
-        return f"{products[pkey]['label']}: {item.get('qty', 0)}点"
-
     with col_order:
         st.write("【注文商品】")
-        for key in products:
-            item = data.get(key, {})
-            if item and (item.get("qty") or 0) > 0:
-                st.write(format_item_line(key, item))
+        for key, qty in data["items"].items():
+            if qty > 0:
+                st.write(f"{products[key]['label']}: {qty}点")
         st.write(f"合計金額: {data['total_price']:,}円")
 
     st.divider()
     c1, c2 = st.columns(2)
     with c1:
         if st.button("修正する", use_container_width=True):
-            data = st.session_state.order_data
-            # --- 商品入力値を session_state に戻す ---
-            for key in products:
-                item = data.get(key, {})
-                st.session_state[f"cust_qty_{key}"] = item.get("qty", 0)
-                spec = product_specs.get(key, {"type": "qty_size_memo"})
-                if spec["type"] == "pants":
-                    st.session_state[f"{key}_waist"] = item.get("waist", None)
-                    st.session_state[f"{key}_length"] = item.get("length", "")
-                elif spec["type"] == "qty_memo":
-                    st.session_state[f"{key}_memo"] = item.get("memo", "")
-                else:
-                    st.session_state[f"{key}_size"] = item.get("size", None)
-                    st.session_state[f"{key}_memo"] = item.get("memo", "")
-
-            # --- 顧客情報 ---
-            st.session_state["address_input"] = data["address"]
-
             st.session_state.phase = "input"
             st.rerun()
-
     with c2:
         if st.button("確定する", type="primary", use_container_width=True):
-
             insert_data = {
                 "name": data["name"],
                 "zipcode": data["zipcode"],
@@ -255,33 +187,22 @@ elif st.session_state.phase == "confirm":
                 "email": data.get("email"),
                 "total_price": data["total_price"],
                 "status": "waiting",
+                "items": data["items"]  # JSONB保存
             }
-            
-            for key in products:
-                item = data.get(key, {})
-                st.session_state[f"cust_qty_{key}"] = item.get("qty", 0)
-
             res = supabase.table("orders").insert(insert_data).execute()
-
             if res.data:
                 st.session_state.order_id = res.data[0]["id"]
                 st.session_state.phase = "complete"
                 st.rerun()
 
 # ===============================
-# 採寸待ち画面
+# --- 採寸待ち画面（数量変更可能） ---
 # ===============================
 elif st.session_state.phase == "complete":
-    order = supabase.table("orders") \
-        .select("*") \
-        .eq("id", st.session_state.order_id) \
-        .single() \
-        .execute().data
-
+    order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
     if order["status"] == "waiting":
         st.title("採寸待ち（数量変更可）")
         st.write(f"受付番号：{order['id']}")
-
         st.info("採寸前であれば数量を変更できます。")
 
         updated_items = {}
@@ -289,56 +210,46 @@ elif st.session_state.phase == "complete":
 
         for key, info in products.items():
             current_qty = order["items"].get(key, 0)
+            qty = st.selectbox(info["label"], options=list(range(11)), index=current_qty, key=f"wait_qty_{key}")
+            updated_items[key] = qty
+            total_price += qty * info["price"]
 
-            qty = st.selectbox(
-                info["label"],
-                options=list(range(11)),
-                index=current_qty,
-                key=f"wait_qty_{key}"
-            )
-
-            if qty > 0:
-                updated_items[key] = qty
-                total_price += qty * info["price"]
+        if st.button("数量を更新"):
+            supabase.table("orders").update({
+                "items": updated_items,
+                "total_price": total_price
+            }).eq("id", order["id"]).execute()
+            st.success("数量を更新しました")
+            st.experimental_rerun()
 
     elif order["status"] == "measured":
         st.session_state.phase = "final_confirm"
         st.rerun()
 
 # ===============================
-# 最終確認
+# --- 最終確認 ---
 # ===============================
 elif st.session_state.phase == "final_confirm":
-    order = supabase.table("orders") \
-        .select("*") \
-        .eq("id", st.session_state.order_id) \
-        .single() \
-        .execute().data
-
+    order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
     st.title("最終確認")
     st.success("採寸が完了しました")
-
-    st.write(f"ウエスト：{order.get('pants_waist')} cm")
-    st.write(f"丈：{order.get('pants_length')} cm")
+    st.write(f"ウエスト：{order.get('pants_waist','')} cm")
+    st.write(f"丈：{order.get('pants_length','')} cm")
 
     if st.button("この内容で確定"):
-        supabase.table("orders").update({
-            "status": "completed"
-        }).eq("id", order["id"]).execute()
-
+        supabase.table("orders").update({"status": "completed"}).eq("id", order["id"]).execute()
         st.session_state.phase = "done"
         st.rerun()
 
 # ===============================
-# 完了
+# --- 完了画面 ---
 # ===============================
 elif st.session_state.phase == "done":
     st.title("ありがとうございました")
     st.success("注文が確定しました")
     st.write(f"受付番号：{st.session_state.order_id}")
     st.write("受付番号をお控えください。")
-    st.session_state.pop("address_input", None)
-  
+
     if st.button("ログアウト"):
         st.session_state.clear()
         st.rerun()
