@@ -88,7 +88,12 @@ if mode == "採寸入力":
 
         # 各商品ごとの入力と保存
         for key, spec in product_specs.items():
-            qty = order.get(key, 0)
+            # 取得した値を int() で数値に変換する（Noneや空文字対策で or 0 を入れる）
+            try:
+                qty = int(order.get(key) or 0)
+            except ValueError:
+                qty = 0
+            
             if qty <= 0:
                 continue 
 
