@@ -21,13 +21,17 @@ if not st.session_state.logged_in:
     st.title("管理者ログイン")
     user_input = st.text_input("ユーザーID")
     pass_input = st.text_input("パスワード", type="password")
-    if st.button("ログイン"):
+    
+    login_clicked = st.button("ログイン")
+    if login_clicked:
         if user_input == ADMIN_ID and pass_input == ADMIN_PASSWORD:
             st.session_state.logged_in = True
-            st.experimental_rerun()
+            st.success("ログイン成功！ページを再読み込みしています...")
+            st.experimental_rerun()  # ←ボタンクリック後なら安全
         else:
             st.error("ログイン失敗")
-    st.stop()
+    st.stop()  # ログイン前は以降処理を止める
+
 
 # ===============================
 # --- 3. メインメニュー ---
