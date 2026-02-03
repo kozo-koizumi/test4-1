@@ -44,31 +44,9 @@ if st.sidebar.button("ログアウト"):
 # ===============================
 
 # --- A. パンツ採寸入力 ---
-if mode == "採寸入力":
-    st.title("採寸入力")
-    
-    order_id_input = st.number_input("受付番号を入力してください", min_value=1, step=1)
-
-    if st.button("検索"):
-        res = supabase.table("orders").select("*").eq("id", order_id_input).single().execute()
-        if res.data:
-            st.session_state.edit_order = res.data
-        else:
-            st.error("該当する受付番号が見つかりません。")
-            st.session_state.edit_order = None
-
-    order = st.session_state.edit_order
-    if order:
-        st.subheader(f"注文者: {order.get('name')} 様")
-        
-        # 注文内容（数量）を表示
-        st.write(f"シャツ: {order.get('shirt', 0)} 点 / パンツ: {order.get('pants', 0)} 点 / 靴下: {order.get('socks', 0)} 点")
-
-# --- A. パンツ採寸入力 ---
 if mode == "パンツ採寸入力":
     st.title("パンツ採寸入力")
     
-    # keyを固定して、検索後にここを操作しやすくします
     order_id_input = st.number_input("受付番号を入力してください", min_value=1, step=1, key="search_input_field")
 
     if st.button("検索"):
@@ -79,7 +57,6 @@ if mode == "パンツ採寸入力":
             st.error("該当する受付番号が見つかりません。")
             st.session_state.edit_order = None
 
-    # 注文データがある場合のみフォームを表示
     if st.session_state.edit_order:
         order = st.session_state.edit_order
         st.subheader(f"注文者: {order.get('name')} 様")
@@ -98,44 +75,30 @@ if mode == "パンツ採寸入力":
                 index=waist_options.index(db_waist) if db_waist in waist_options else 0
             )
             
-            # 丈と備考
             length = st.text_input("パンツ 丈(cm)", value=order.get("pants_length") or "")
             memo = st.text_input("備考", value=order.get("pants_memo") or "")
 
             if st.form_submit_button("採寸完了（お客様の確認へ進める）"):
-                # 1. DBを更新
+                # DBを更新
                 supabase.table("orders").update({
                     "pants_waist": waist,
                     "pants_length": length,
-                    "pants_memo": memo
-                    "status": "measured"  # これで客側に「確認ボタン」が出る
+                    "pants_memo": memo,  # ←修正点：カンマを追加
+                    "status": "measured"
                 }).eq("id", order["id"]).execute()
-                st.success("お客様の画面に確認ボタンを表示しました。")
-
-                # 2. セッションからデータを完全に消去（ここが重要）
+                
                 st.session_state.edit_order = None
-                
-                # 3. 完了メッセージを出す（rerunすると消えるのでtoastが便利）
                 st.toast(f"ID:{order['id']} を保存しました")
-                
-                # 4. 画面をリセット（これで「検索前」の状態に戻る）
                 st.rerun()
 
-# --- B. 注文一覧（簡易版：昇順） ---
+# --- B. 注文一覧 ---
 elif mode == "注文一覧":
     st.title("注文一覧")
-    
-    # IDの小さい順（昇順）で取得
     res = supabase.table("orders").select("id", "name").order("id", desc=False).execute()
     orders = res.data or []
 
     if not orders:
         st.info("注文データがありません。")
     else:
-        # st.tableの代わりにst.dataframeを使い、hide_index=Trueを指定
+        # 修正点：括弧を閉じ、末尾の日本語を削除
         st.dataframe(orders, hide_index=True, use_container_width=True)
-
-
-
-
-
