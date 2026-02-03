@@ -27,14 +27,12 @@ if not st.session_state.logged_in:
     if st.button("ログイン"):
         if user_input == ADMIN_ID and pass_input == ADMIN_PASSWORD:
             st.session_state.logged_in = True
-            # rerun は不要
+            st.success("ログイン成功！")
+            st.rerun()  # ← ここで強制再実行して「メインメニュー」側へ飛ばす
         else:
-            st.error("ログイン失敗")
+            st.error("ユーザーIDまたはパスワードが違います")
     
-    # ログインしていない場合はここで画面停止
-    if not st.session_state.logged_in:
-        st.stop()
-
+    st.stop() # ログインしていない場合は、これ以降のコードを実行させない
 
 # ===============================
 # --- 3. メインメニュー ---
