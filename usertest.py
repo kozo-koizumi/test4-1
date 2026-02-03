@@ -284,7 +284,7 @@ elif st.session_state.phase == "confirm":
             st.rerun()
 
     with c2:
-    if st.button("確定する", type="primary", use_container_width=True):
+        if st.button("確定する", type="primary", use_container_width=True):
 
         insert_data = {
             "name": data["name"],
