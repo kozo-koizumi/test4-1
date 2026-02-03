@@ -114,15 +114,17 @@ if not st.session_state.user_logged_in:
 # --- 入力コンポーネント ---
 # ===============================
 def product_row(label: str, key: str):
-    """客側：商品タイトルと数量選択だけを表示"""
     st.markdown(f"### {label}")
     
-    # 数量だけを選択（0〜10個など）
     qty = st.selectbox(
         "数量を選択してください", 
         options=list(range(11)), 
         key=f"cust_qty_{key}"
     )
+
+    return {
+        "qty": qty
+    }
 
 # ===============================
 # --- 入力画面 ---
