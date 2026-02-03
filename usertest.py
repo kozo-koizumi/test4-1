@@ -209,18 +209,7 @@ elif st.session_state.phase == "confirm":
         st.write(f"メール: {data.get('email','未入力')}")
 
     def format_item_line(pkey: str, item: dict) -> str:
-        spec = product_specs.get(pkey, {"type": "qty_size_memo"})
-        memo = f" / 備考: {item['memo']}" if item.get("memo") else ""
-        if spec["type"] == "pants":
-            # パンツ用表示
-            waist = item.get("waist", "")
-            length = item.get("length", "")
-            return f"{products[pkey]['label']}: {item['qty']}点 (ウエスト: {waist}, 丈: {length}){memo}"
-        elif spec["type"] == "qty_memo":
-            return f"{products[pkey]['label']}: {item['qty']}点{memo}"
-        else:
-            size = item.get("size", "")
-            return f"{products[pkey]['label']}: {item['qty']}点 ({size}){memo}"
+        return f"{products[pkey]['label']}: {item.get('qty', 0)}点"
 
     with col_order:
         st.write("【注文商品】")
