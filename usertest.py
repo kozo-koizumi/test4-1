@@ -1,8 +1,8 @@
 import streamlit as st
 import requests
 from supabase import create_client, Client
-from streamlit_autorefresh import st_autorefresh
-
+#from streamlit_autorefresh import st_autorefresh
+import time
 
 # ===============================
 # --- Supabase設定 ---
@@ -283,7 +283,8 @@ elif st.session_state.phase == "complete":
         st.write(f"受付番号：{order['id']}")
         st.info("スタッフが採寸中です。しばらくお待ちください。")
 
-        st_autorefresh(interval=5000, key="wait")
+        time.sleep(5)
+        st.rerun()
 
     elif order["status"] == "measured":
         st.session_state.phase = "final_confirm"
