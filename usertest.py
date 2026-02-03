@@ -279,12 +279,27 @@ elif st.session_state.phase == "complete":
         .execute().data
 
     if order["status"] == "waiting":
-        st.title("採寸待ち")
+        st.title("採寸待ち（数量変更可）")
         st.write(f"受付番号：{order['id']}")
-        st.info("スタッフが採寸中です。しばらくお待ちください。")
 
-        time.sleep(5)
-        st.rerun()
+        st.info("採寸前であれば数量を変更できます。")
+
+        updated_items = {}
+        total_price = 0
+
+        for key, info in products.items():
+            current_qty = order["items"].get(key, 0)
+
+            qty = st.selectbox(
+                info["label"],
+                options=list(range(11)),
+                index=current_qty,
+                key=f"wait_qty_{key}"
+            )
+
+            if qty > 0:
+                updated_items[key] = qty
+                total_price += qty * info["price"]
 
     elif order["status"] == "measured":
         st.session_state.phase = "final_confirm"
