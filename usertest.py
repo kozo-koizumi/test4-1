@@ -227,7 +227,7 @@ elif st.session_state.phase == "confirm":
             # --- 商品入力値を session_state に戻す ---
             for key in products:
                 item = data.get(key, {})
-                st.session_state[f"{key}_qty"] = item.get("qty", 0)
+                st.session_state[f"cust_qty_{key}"] = item.get("qty", 0)
                 spec = product_specs.get(key, {"type": "qty_size_memo"})
                 if spec["type"] == "pants":
                     st.session_state[f"{key}_waist"] = item.get("waist", None)
@@ -255,23 +255,11 @@ elif st.session_state.phase == "confirm":
                 "email": data.get("email"),
                 "total_price": data["total_price"],
                 "status": "waiting",
-            }    
-
+            }
+            
             for key in products:
                 item = data.get(key, {})
-                spec = product_specs.get(key, {"type": "qty_size_memo"})
-
-                insert_data[key] = item.get("qty", 0)
-    
-                if spec["type"] == "pants":
-                    insert_data[f"{key}_waist"] = item.get("waist")
-                    insert_data[f"{key}_length"] = item.get("length")
-                    insert_data[f"{key}_memo"] = item.get("memo", "")
-                elif spec["type"] == "qty_memo":
-                    insert_data[f"{key}_memo"] = item.get("memo", "")
-                else:
-                    insert_data[f"{key}_size"] = item.get("size")
-                    insert_data[f"{key}_memo"] = item.get("memo", "")
+                st.session_state[f"cust_qty_{key}"] = item.get("qty", 0)
 
             res = supabase.table("orders").insert(insert_data).execute()
 
