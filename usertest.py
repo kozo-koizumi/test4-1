@@ -1,6 +1,8 @@
 import streamlit as st
 import requests
 from supabase import create_client, Client
+from streamlit_autorefresh import st_autorefresh
+
 
 # ===============================
 # --- Supabase設定 ---
@@ -282,39 +284,41 @@ elif st.session_state.phase == "confirm":
             st.rerun()
 
     with c2:
-        if st.button("確定する", type="primary", use_container_width=True):
-            # Supabaseに入れるデータを仕様から動的に構築
-            res = supabase.table("orders").insert({
-                "name": data["name"],
-                "zipcode": data["zipcode"],
-                "address": data["address"],
-                "phone": data.get("phone"),
-                "email": data.get("email"),
-                "total_price": data["total_price"],
-                "status": "waiting",
-            })
+    if st.button("確定する", type="primary", use_container_width=True):
 
-            for key in products:
-                item = data.get(key, {})
-                spec = product_specs.get(key, {"type": "qty_size_memo"})
-                # 数量
-                insert_data[f"{key}"] = item.get("qty", 0)
-                # 付随属性
-                if spec["type"] == "pants":
-                    insert_data[f"{key}_waist"] = item.get("waist", None)
-                    insert_data[f"{key}_length"] = item.get("length", "")
-                    insert_data[f"{key}_memo"] = item.get("memo", "")
-                elif spec["type"] == "qty_memo":
-                    insert_data[f"{key}_memo"] = item.get("memo", "")
-                else:
-                    insert_data[f"{key}_size"] = item.get("size", None)
-                    insert_data[f"{key}_memo"] = item.get("memo", "")
+        insert_data = {
+            "name": data["name"],
+            "zipcode": data["zipcode"],
+            "address": data["address"],
+            "phone": data.get("phone"),
+            "email": data.get("email"),
+            "total_price": data["total_price"],
+            "status": "waiting",
+        }
 
-            res = supabase.table("orders").insert(insert_data).execute()
-            if getattr(res, "data", None):
-                st.session_state.order_id = res.data[0].get("id")
+        for key in products:
+            item = data.get(key, {})
+            spec = product_specs.get(key, {"type": "qty_size_memo"})
+
+            insert_data[key] = item.get("qty", 0)
+
+            if spec["type"] == "pants":
+                insert_data[f"{key}_waist"] = item.get("waist")
+                insert_data[f"{key}_length"] = item.get("length")
+                insert_data[f"{key}_memo"] = item.get("memo", "")
+            elif spec["type"] == "qty_memo":
+                insert_data[f"{key}_memo"] = item.get("memo", "")
+            else:
+                insert_data[f"{key}_size"] = item.get("size")
+                insert_data[f"{key}_memo"] = item.get("memo", "")
+
+        res = supabase.table("orders").insert(insert_data).execute()
+
+        if res.data:
+            st.session_state.order_id = res.data[0]["id"]
             st.session_state.phase = "complete"
             st.rerun()
+
 # ===============================
 # 採寸待ち画面
 # ===============================
