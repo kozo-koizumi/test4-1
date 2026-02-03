@@ -286,38 +286,38 @@ elif st.session_state.phase == "confirm":
     with c2:
         if st.button("確定する", type="primary", use_container_width=True):
 
-        insert_data = {
-            "name": data["name"],
-            "zipcode": data["zipcode"],
-            "address": data["address"],
-            "phone": data.get("phone"),
-            "email": data.get("email"),
-            "total_price": data["total_price"],
-            "status": "waiting",
-        }
+            insert_data = {
+                "name": data["name"],
+                "zipcode": data["zipcode"],
+                "address": data["address"],
+                "phone": data.get("phone"),
+                "email": data.get("email"),
+                "total_price": data["total_price"],
+                "status": "waiting",
+            }    
 
-        for key in products:
-            item = data.get(key, {})
-            spec = product_specs.get(key, {"type": "qty_size_memo"})
+            for key in products:
+                item = data.get(key, {})
+                spec = product_specs.get(key, {"type": "qty_size_memo"})
 
-            insert_data[key] = item.get("qty", 0)
+                insert_data[key] = item.get("qty", 0)
+    
+                if spec["type"] == "pants":
+                    insert_data[f"{key}_waist"] = item.get("waist")
+                    insert_data[f"{key}_length"] = item.get("length")
+                    insert_data[f"{key}_memo"] = item.get("memo", "")
+                elif spec["type"] == "qty_memo":
+                    insert_data[f"{key}_memo"] = item.get("memo", "")
+                else:
+                    insert_data[f"{key}_size"] = item.get("size")
+                    insert_data[f"{key}_memo"] = item.get("memo", "")
 
-            if spec["type"] == "pants":
-                insert_data[f"{key}_waist"] = item.get("waist")
-                insert_data[f"{key}_length"] = item.get("length")
-                insert_data[f"{key}_memo"] = item.get("memo", "")
-            elif spec["type"] == "qty_memo":
-                insert_data[f"{key}_memo"] = item.get("memo", "")
-            else:
-                insert_data[f"{key}_size"] = item.get("size")
-                insert_data[f"{key}_memo"] = item.get("memo", "")
+            res = supabase.table("orders").insert(insert_data).execute()
 
-        res = supabase.table("orders").insert(insert_data).execute()
-
-        if res.data:
-            st.session_state.order_id = res.data[0]["id"]
-            st.session_state.phase = "complete"
-            st.rerun()
+            if res.data:
+                st.session_state.order_id = res.data[0]["id"]
+                st.session_state.phase = "complete"
+                st.rerun()
 
 # ===============================
 # 採寸待ち画面
