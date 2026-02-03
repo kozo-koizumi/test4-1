@@ -220,7 +220,7 @@ elif st.session_state.phase == "complete":
                 "total_price": total_price
             }).eq("id", order["id"]).execute()
             st.success("数量を更新しました")
-            st.experimental_rerun()
+            st.rerun()
 
     elif order["status"] == "measured":
         st.session_state.phase = "final_confirm"
