@@ -15,22 +15,22 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 # ===============================
-# --- 2. ログイン画面 ---
+# --- ログイン画面 ---
 # ===============================
 if not st.session_state.logged_in:
     st.title("管理者ログイン")
     user_input = st.text_input("ユーザーID")
     pass_input = st.text_input("パスワード", type="password")
     
-    login_clicked = st.button("ログイン")
-    if login_clicked:
+    if st.button("ログイン"):
         if user_input == ADMIN_ID and pass_input == ADMIN_PASSWORD:
             st.session_state.logged_in = True
-            st.success("ログイン成功！ページを再読み込みしています...")
-            st.experimental_rerun()  # ←ボタンクリック後なら安全
+            st.success("ログイン成功！")
+            st.stop()  # ← rerun なしでここで終了。次回描画でログイン状態反映
         else:
             st.error("ログイン失敗")
-    st.stop()  # ログイン前は以降処理を止める
+    st.stop()
+
 
 
 # ===============================
