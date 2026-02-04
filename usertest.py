@@ -227,17 +227,13 @@ elif st.session_state.phase == "complete":
     if order["status"] == "measured":
         st.info("採寸が完了しました。内容をご確認ください。")
         st.session_state.phase = "final_confirm"
-        items = order["items"]  # {"blazer": 2, "shirt": 1, "pants": 0, ...}
 
-        # supabase に個別カラムでアップデート
-        supabase.table("orders").update({
-            "blazer": items.get("blazer", 0),
-            "shirt": items.get("shirt", 0),
-            "pants": items.get("pants", 0),
-            # 他の商品も同様
-        }).eq("id", order["id"]).execute()
+        # items を個別カラムに展開（measured になったら一度だけ）
+        items = order.get("items", {})
+        update_data = {k: items.get(k, 0) for k in products.keys()}
+        supabase.table("orders").update(update_data).eq("id", order["id"]).execute()
 
-        st.rerun()
+        st.rerun()  # これで final_confirm に切り替わる
 
 # ===============================
 # --- 最終確認 ---
