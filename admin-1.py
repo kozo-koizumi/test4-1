@@ -58,7 +58,6 @@ product_specs = {
     "pe_jacket":    {"label": "ジャージ（上）", "type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
     "pe_pants":     {"label": "ジャージ（下）", "type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
 }
-
 # ===============================
 # --- 5. 採寸入力モード ---
 # ===============================
@@ -75,7 +74,7 @@ if mode == "採寸入力":
             st.error(f"受付番号 {order_id_input} は登録されていません。")
             st.session_state.edit_order = None
 
-    # --- 修正ポイント：ここを if st.button の外に出しました ---
+    # 編集対象がある場合
     if st.session_state.edit_order:
         order = st.session_state.edit_order
         st.subheader(f"注文者: {order.get('name')} 様")
@@ -141,7 +140,15 @@ if mode == "採寸入力":
                     except Exception as e:
                         st.error(f"{display_name} の保存に失敗しました: {e}")
 
-   
+        # ← ここで全採寸完了ボタンも edit_order 内に入れる
+        st.divider()
+        if st.button("全ての採寸を完了して確定する", type="primary"):
+            supabase.table("orders").update({"status": "measured"}).eq("id", order["id"]).execute()
+            st.session_state.edit_order = None
+            st.success("全ての採寸が完了しました！")
+            st.rerun()
+
+
 # ===============================
 # --- 6. 注文一覧モード ---
 # ===============================
