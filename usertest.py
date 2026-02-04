@@ -242,34 +242,41 @@ elif st.session_state.phase == "complete":
 
     # 採寸完了していれば「最終確認へ進む」ボタンを表示（complete フェーズ内だけ）
     if st.session_state.get("measured_done", False):
-        if st.button("最終確認へ進む"):
-            st.session_state.phase = "final_confirm"
+        if st.button("ご注文内容へ（これ以降は数量の変更等はできません）"):
+            st.session_state.phase = "done"
+            supabase.table("orders").update({"status": "completed"}).eq("id", order["id"]).execute()
             st.session_state.measured_done = False  # リセット
             st.rerun()
-
-# ===============================
-# --- 最終確認 ---
-# ===============================
-elif st.session_state.phase == "final_confirm":
-    order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
-    st.title("最終確認")
-    st.success("採寸が完了しました")
-    st.write(f"ウエスト：{order.get('pants_waist','')} cm")
-    st.write(f"丈：{order.get('pants_length','')} cm")
-
-    if st.button("この内容で確定"):
-        supabase.table("orders").update({"status": "completed"}).eq("id", order["id"]).execute()
-        st.session_state.phase = "done"
-        st.rerun()
 
 # ===============================
 # --- 完了画面 ---
 # ===============================
 elif st.session_state.phase == "done":
+    order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
     st.title("ありがとうございました")
     st.success("注文が確定しました")
     st.write(f"受付番号：{st.session_state.order_id}")
     st.write("受付番号をお控えください。")
+    st.write("注文内容")
+
+    col_info, col_order = st.columns(2)
+    with col_info:
+        st.write("【お客様情報】")
+        st.write(f"お名前: {order.get('name','')}")
+        st.write(f"郵便番号: {order.get('zipcode','')}")
+        st.write(f"住所: {order.get('address','')}")
+        st.write(f"電話番号: {order.get('phone','未入力')}")
+        st.write(f"メール: {order.get('email','未入力')}")
+
+    with col_order:
+        st.write("【注文商品】")
+        items = order.get("items", {})
+        for key, qty in items.items():
+            if qty > 0:
+                st.write(f"{products[key]['label']}: {qty}点")
+        st.write(f"合計金額: {order.get('total_price',0):,}円")
+
+    st.divider()
 
     if st.button("ログアウト"):
         st.session_state.clear()
