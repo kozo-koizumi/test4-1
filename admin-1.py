@@ -28,7 +28,7 @@ if not st.session_state.logged_in:
         if user_input == ADMIN_ID and pass_input == ADMIN_PASSWORD:
             st.session_state.logged_in = True
             st.success("ログイン成功！")
-            st.rerun()
+            st.experimental_set_query_params()  # ← ページ更新の代わり
         else:
             st.error("ユーザーIDまたはパスワードが違います")
     
@@ -40,7 +40,7 @@ if not st.session_state.logged_in:
 mode = st.sidebar.radio("機能を選択", ["採寸入力", "注文一覧"])
 if st.sidebar.button("ログアウト"):
     st.session_state.logged_in = False
-    st.experimental_rerun()
+    st.experimental_set_query_params()
 
 # ===============================
 # --- 4. 商品仕様 ---
@@ -69,7 +69,6 @@ if mode == "採寸入力":
         res = supabase.table("orders").select("*").eq("id", order_id_input).execute()
         if res.data and len(res.data) > 0:
             st.session_state.edit_order = res.data[0]
-            st.rerun()
         else:
             st.error(f"受付番号 {order_id_input} は登録されていません。")
             st.session_state.edit_order = None
@@ -77,7 +76,6 @@ if mode == "採寸入力":
     if st.session_state.edit_order:
         order = st.session_state.edit_order
         st.subheader(f"注文者: {order.get('name')} 様")
-
         items = order.get("items") or {}
 
         for key, spec in product_specs.items():
@@ -89,19 +87,16 @@ if mode == "採寸入力":
                 continue
 
             display_name = spec.get("label", key)
-
             with st.container(border=True):
                 st.markdown(f"### 👕 {display_name}（数量：{qty}）")
                 item_data = {}
 
-                # タイプ選択
                 if "types" in spec:
                     type_options = spec["types"]
                     current_type = order.get(f"{key}_type")
                     t_idx = type_options.index(current_type) if current_type in type_options else 0
                     item_data[f"{key}_type"] = st.selectbox("タイプ", type_options, index=t_idx, key=f"t_{key}")
 
-                # パンツ仕様
                 if spec["type"] == "pants":
                     w_start, w_end, w_step = spec["waist_range"]
                     waist_options = list(range(w_start, w_end, w_step))
@@ -114,7 +109,6 @@ if mode == "採寸入力":
                     item_data[f"{key}_length"] = st.text_input("丈(cm)", value=order.get(f"{key}_length") or "", key=f"l_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_p_{key}")
 
-                # 数量・サイズ・メモ
                 elif spec["type"] == "qty_size_memo":
                     s_opt = spec.get("size_options")
                     if isinstance(s_opt, dict) and "range" in s_opt:
@@ -133,12 +127,12 @@ if mode == "採寸入力":
                     item_data[f"{key}_size"] = st.selectbox("サイズ", size_choices, index=s_idx, key=f"s_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_s_{key}")
 
-                # 一時保存ボタン
                 if st.button(f"{display_name} を一時保存", key=f"btn_{key}"):
                     try:
                         supabase.table("orders").update(item_data).eq("id", order["id"]).execute()
+                        # DB更新後にセッション状態を更新して画面をリロード代替
+                        st.session_state.edit_order.update(item_data)
                         st.success(f"{display_name} の採寸データが更新されました ✅")
-                        st.experimental_rerun()  # ← 保存後にリロードして最新データ反映
                     except Exception as e:
                         st.error(f"{display_name} の保存に失敗しました: {e}")
 
@@ -147,7 +141,6 @@ if mode == "採寸入力":
 # ===============================
 elif mode == "注文一覧":
     st.title("注文一覧")
-
     res = supabase.table("orders").select("id", "name", "status").order("id", desc=False).execute()
     orders = res.data or []
 
