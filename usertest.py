@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from supabase import create_client, Client
+from streamlit_autorefresh import st_autorefresh
 
 # ===============================
 # --- Supabase設定 ---
@@ -198,6 +199,8 @@ elif st.session_state.phase == "confirm":
 # ===============================
 # --- 採寸待ち画面（数量変更可能） ---
 # ===============================
+from streamlit_autorefresh import st_autorefresh
+
 elif st.session_state.phase == "complete":
     order = (
         supabase.table("orders")
@@ -209,9 +212,19 @@ elif st.session_state.phase == "complete":
     )
 
     # =========================
+    # 採寸完了チェック（最優先）
+    # =========================
+    if order["status"] == "measured":
+        st.session_state.phase = "final_confirm"
+        st.rerun()
+
+    # =========================
     # 採寸待ち
     # =========================
     if order["status"] == "waiting":
+        # ← ★ここ！
+        st_autorefresh(interval=3000, key="waiting_refresh")
+
         st.title("採寸待ち（数量変更可）")
         st.write(f"受付番号：{order['id']}")
         st.info("採寸前であれば数量を変更できます。")
@@ -232,7 +245,6 @@ elif st.session_state.phase == "complete":
                 total_price += qty * info["price"]
 
             st.write(f"合計金額：¥{total_price:,}")
-            st.caption("※ 採寸が始まると数量は変更できません")
 
             if st.button("この内容で数量を更新"):
                 supabase.table("orders").update({
