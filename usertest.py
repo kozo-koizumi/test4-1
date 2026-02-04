@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from supabase import create_client, Client
-from streamlit_autorefresh import st_autorefresh
+#from streamlit_autorefresh import st_autorefresh
 
 # ===============================
 # --- Supabase設定 ---
@@ -199,7 +199,7 @@ elif st.session_state.phase == "confirm":
 # ===============================
 # --- 採寸待ち画面（数量変更可能） ---
 # ===============================
-from streamlit_autorefresh import st_autorefresh
+#from streamlit_autorefresh import st_autorefresh
 
 elif st.session_state.phase == "complete":
     order = (
@@ -223,7 +223,7 @@ elif st.session_state.phase == "complete":
     # =========================
     if order["status"] == "waiting":
         # ← ★ここ！
-        st_autorefresh(interval=3000, key="waiting_refresh")
+        #st_autorefresh(interval=3000, key="waiting_refresh")
 
         st.title("採寸待ち（数量変更可）")
         st.write(f"受付番号：{order['id']}")
