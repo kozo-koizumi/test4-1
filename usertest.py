@@ -88,7 +88,6 @@ def product_row(label: str, key: str):
     st.markdown(f"### {label}")
     qty = st.selectbox("数量を選択してください", options=list(range(11)), key=f"cust_qty_{key}")
     return {"qty": qty}
-
 # ===============================
 # --- 入力画面 ---
 # ===============================
@@ -149,9 +148,9 @@ if st.session_state.phase == "input":
             st.session_state.phase = "confirm"
             st.rerun()
 
-# ===============================
-# --- 確認画面 ---
-# ===============================
+    # ===============================
+    # --- 確認画面 --- (ここをインデントして if の中に含めました)
+    # ===============================
 
 elif st.session_state.phase == "confirm":
     data = st.session_state.order_data
