@@ -27,11 +27,10 @@ if not st.session_state.logged_in:
     if st.button("ログイン"):
         if user_input == ADMIN_ID and pass_input == ADMIN_PASSWORD:
             st.session_state.logged_in = True
-            st.success("ログイン成功！")
-            st.experimental_set_query_params()  # ← ページ更新の代わり
+            # ログイン成功メッセージは出さずに画面遷移
+            st.session_state.edit_order = None
         else:
             st.error("ユーザーIDまたはパスワードが違います")
-    
     st.stop()
 
 # ===============================
@@ -40,7 +39,8 @@ if not st.session_state.logged_in:
 mode = st.sidebar.radio("機能を選択", ["採寸入力", "注文一覧"])
 if st.sidebar.button("ログアウト"):
     st.session_state.logged_in = False
-    st.experimental_set_query_params()
+    st.session_state.edit_order = None
+    st.experimental_rerun()
 
 # ===============================
 # --- 4. 商品仕様 ---
@@ -78,6 +78,7 @@ if mode == "採寸入力":
         st.subheader(f"注文者: {order.get('name')} 様")
         items = order.get("items") or {}
 
+        # 商品ごとの入力ループ
         for key, spec in product_specs.items():
             try:
                 qty = int(items.get(key, 0))
@@ -103,12 +104,11 @@ if mode == "採寸入力":
                     db_waist = order.get(f"{key}_waist")
                     try: db_waist_val = int(float(db_waist))
                     except: db_waist_val = waist_options[0]
-
                     w_idx = waist_options.index(db_waist_val) if db_waist_val in waist_options else 0
                     item_data[f"{key}_waist"] = st.selectbox("ウエスト(cm)", waist_options, index=w_idx, key=f"w_{key}")
                     item_data[f"{key}_length"] = st.text_input("丈(cm)", value=order.get(f"{key}_length") or "", key=f"l_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_p_{key}")
-
+                
                 elif spec["type"] == "qty_size_memo":
                     s_opt = spec.get("size_options")
                     if isinstance(s_opt, dict) and "range" in s_opt:
@@ -120,27 +120,34 @@ if mode == "採寸入力":
                             curr += step
                     else:
                         size_choices = s_opt
-
+                    
                     current_size = order.get(f"{key}_size")
                     try: s_idx = size_choices.index(current_size)
                     except: s_idx = 0
                     item_data[f"{key}_size"] = st.selectbox("サイズ", size_choices, index=s_idx, key=f"s_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_s_{key}")
 
+                # 一時保存
                 if st.button(f"{display_name} を一時保存", key=f"btn_{key}"):
                     try:
                         supabase.table("orders").update(item_data).eq("id", order["id"]).execute()
-                        # DB更新後にセッション状態を更新して画面をリロード代替
-                        st.session_state.edit_order.update(item_data)
                         st.success(f"{display_name} の採寸データが更新されました ✅")
                     except Exception as e:
                         st.error(f"{display_name} の保存に失敗しました: {e}")
+
+        st.divider()
+        # 確定ボタンはループ外
+        if st.button("全ての採寸を完了して確定する", type="primary"):
+            supabase.table("orders").update({"status": "measured"}).eq("id", order["id"]).execute()
+            st.session_state.edit_order = None
+            st.success("全ての採寸が完了しました！")
 
 # ===============================
 # --- 6. 注文一覧モード ---
 # ===============================
 elif mode == "注文一覧":
     st.title("注文一覧")
+
     res = supabase.table("orders").select("id", "name", "status").order("id", desc=False).execute()
     orders = res.data or []
 
