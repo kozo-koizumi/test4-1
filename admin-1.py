@@ -77,69 +77,69 @@ if mode == "採寸入力":
 
     # --- 修正ポイント：ここを if st.button の外に出しました ---
     if st.session_state.edit_order:
-    order = st.session_state.edit_order
-    st.subheader(f"注文者: {order.get('name')} 様")
+        order = st.session_state.edit_order
+        st.subheader(f"注文者: {order.get('name')} 様")
 
-    # 各商品ごとの入力と保存
-    items = order.get("items") or {}
-    for key, spec in product_specs.items():
-        try:
-            qty = int(items.get(key, 0))
-        except ValueError:
-            qty = 0
+        # 各商品ごとの入力と保存
+        items = order.get("items") or {}
+        for key, spec in product_specs.items():
+            try:
+                qty = int(items.get(key, 0))
+            except ValueError:
+                qty = 0
+            
+            if qty <= 0:
+                continue 
+
+            display_name = spec.get("label", key)
         
-        if qty <= 0:
-            continue 
+            with st.container(border=True):
+                st.markdown(f"### 👕 {display_name}（数量：{qty}）")
+                item_data = {}
+    
+                if "types" in spec:
+                    type_options = spec["types"]
+                    current_type = order.get(f"{key}_type")
+                    t_idx = type_options.index(current_type) if current_type in type_options else 0
+                    item_data[f"{key}_type"] = st.selectbox("タイプ", type_options, index=t_idx, key=f"t_{key}")
 
-        display_name = spec.get("label", key)
-        
-        with st.container(border=True):
-            st.markdown(f"### 👕 {display_name}（数量：{qty}）")
-            item_data = {}
-
-            if "types" in spec:
-                type_options = spec["types"]
-                current_type = order.get(f"{key}_type")
-                t_idx = type_options.index(current_type) if current_type in type_options else 0
-                item_data[f"{key}_type"] = st.selectbox("タイプ", type_options, index=t_idx, key=f"t_{key}")
-
-            if spec["type"] == "pants":
-                w_start, w_end, w_step = spec["waist_range"]
-                waist_options = list(range(w_start, w_end, w_step))
-                db_waist = order.get(f"{key}_waist")
-                try: db_waist_val = int(float(db_waist))
-                except: db_waist_val = waist_options[0]
+                if spec["type"] == "pants":
+                    w_start, w_end, w_step = spec["waist_range"]
+                    waist_options = list(range(w_start, w_end, w_step))
+                    db_waist = order.get(f"{key}_waist")
+                    try: db_waist_val = int(float(db_waist))
+                    except: db_waist_val = waist_options[0]
                 
-                w_idx = waist_options.index(db_waist_val) if db_waist_val in waist_options else 0
-                item_data[f"{key}_waist"] = st.selectbox("ウエスト(cm)", waist_options, index=w_idx, key=f"w_{key}")
-                item_data[f"{key}_length"] = st.text_input("丈(cm)", value=order.get(f"{key}_length") or "", key=f"l_{key}")
-                item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_p_{key}")
-
-            elif spec["type"] == "qty_size_memo":
-                s_opt = spec.get("size_options")
-                if isinstance(s_opt, dict) and "range" in s_opt:
-                    start, end, step = s_opt["range"]
-                    size_choices = []
-                    curr = float(start)
-                    while curr <= end:
-                        size_choices.append(curr if step % 1 != 0 else int(curr))
-                        curr += step
-                else:
-                    size_choices = s_opt
-                
-                current_size = order.get(f"{key}_size")
-                try: s_idx = size_choices.index(current_size)
-                except: s_idx = 0
-                item_data[f"{key}_size"] = st.selectbox("サイズ", size_choices, index=s_idx, key=f"s_{key}")
-                item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_s_{key}")
-
-            # 一時保存
-            if st.button(f"{display_name} を一時保存", key=f"btn_{key}"):
-                try:
-                    supabase.table("orders").update(item_data).eq("id", order["id"]).execute()
-                    st.success(f"{display_name} の採寸データが更新されました ✅")
-                except Exception as e:
-                    st.error(f"{display_name} の保存に失敗しました: {e}")
+                    w_idx = waist_options.index(db_waist_val) if db_waist_val in waist_options else 0
+                    item_data[f"{key}_waist"] = st.selectbox("ウエスト(cm)", waist_options, index=w_idx, key=f"w_{key}")
+                    item_data[f"{key}_length"] = st.text_input("丈(cm)", value=order.get(f"{key}_length") or "", key=f"l_{key}")
+                    item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_p_{key}")
+    
+                elif spec["type"] == "qty_size_memo":
+                    s_opt = spec.get("size_options")
+                    if isinstance(s_opt, dict) and "range" in s_opt:
+                        start, end, step = s_opt["range"]
+                        size_choices = []
+                        curr = float(start)
+                        while curr <= end:
+                            size_choices.append(curr if step % 1 != 0 else int(curr))
+                            curr += step
+                    else:
+                        size_choices = s_opt
+                    
+                    current_size = order.get(f"{key}_size")
+                    try: s_idx = size_choices.index(current_size)
+                    except: s_idx = 0
+                    item_data[f"{key}_size"] = st.selectbox("サイズ", size_choices, index=s_idx, key=f"s_{key}")
+                    item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_s_{key}")
+    
+                # 一時保存
+                if st.button(f"{display_name} を一時保存", key=f"btn_{key}"):
+                    try:
+                        supabase.table("orders").update(item_data).eq("id", order["id"]).execute()
+                        st.success(f"{display_name} の採寸データが更新されました ✅")
+                    except Exception as e:
+                        st.error(f"{display_name} の保存に失敗しました: {e}")
 
    
 # ===============================
