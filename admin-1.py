@@ -28,11 +28,11 @@ if not st.session_state.logged_in:
         if user_input == ADMIN_ID and pass_input == ADMIN_PASSWORD:
             st.session_state.logged_in = True
             st.success("ログイン成功！")
-            st.rerun()  # ← ここで強制再実行して「メインメニュー」側へ飛ばす
+            st.rerun()
         else:
             st.error("ユーザーIDまたはパスワードが違います")
     
-    st.stop() # ログインしていない場合は、これ以降のコードを実行させない
+    st.stop()
 
 # ===============================
 # --- 3. メインメニュー ---
@@ -43,9 +43,8 @@ if st.sidebar.button("ログアウト"):
     st.experimental_rerun()
 
 # ===============================
-# --- 4. 商品仕様 (更新版) ---
+# --- 4. 商品仕様 ---
 # ===============================
-# DBのカラム名に合わせたキー構成です。labelを追加しています。
 product_specs = {
     "blazer":       {"label": "ブレザー", "type": "qty_size_memo", "size_options": ["S","M","L","XL"], "types": ["Aタイプ", "Bタイプ"]},
     "shirt":        {"label": "シャツ", "type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
@@ -58,6 +57,7 @@ product_specs = {
     "pe_jacket":    {"label": "ジャージ（上）", "type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
     "pe_pants":     {"label": "ジャージ（下）", "type": "qty_size_memo", "size_options": ["S","M","L","XL"]},
 }
+
 # ===============================
 # --- 5. 採寸入力モード ---
 # ===============================
@@ -74,18 +74,16 @@ if mode == "採寸入力":
             st.error(f"受付番号 {order_id_input} は登録されていません。")
             st.session_state.edit_order = None
 
-    # 編集対象がある場合
     if st.session_state.edit_order:
         order = st.session_state.edit_order
         st.subheader(f"注文者: {order.get('name')} 様")
 
         items = order.get("items") or {}
 
-        # --- 各商品フォーム ---
         for key, spec in product_specs.items():
             try:
                 qty = int(items.get(key, 0))
-            except:
+            except ValueError:
                 qty = 0
             if qty <= 0:
                 continue
@@ -96,26 +94,27 @@ if mode == "採寸入力":
                 st.markdown(f"### 👕 {display_name}（数量：{qty}）")
                 item_data = {}
 
+                # タイプ選択
                 if "types" in spec:
                     type_options = spec["types"]
                     current_type = order.get(f"{key}_type")
                     t_idx = type_options.index(current_type) if current_type in type_options else 0
                     item_data[f"{key}_type"] = st.selectbox("タイプ", type_options, index=t_idx, key=f"t_{key}")
 
+                # パンツ仕様
                 if spec["type"] == "pants":
                     w_start, w_end, w_step = spec["waist_range"]
                     waist_options = list(range(w_start, w_end, w_step))
                     db_waist = order.get(f"{key}_waist")
-                    try:
-                        db_waist_val = int(float(db_waist))
-                    except:
-                        db_waist_val = waist_options[0]
+                    try: db_waist_val = int(float(db_waist))
+                    except: db_waist_val = waist_options[0]
 
                     w_idx = waist_options.index(db_waist_val) if db_waist_val in waist_options else 0
                     item_data[f"{key}_waist"] = st.selectbox("ウエスト(cm)", waist_options, index=w_idx, key=f"w_{key}")
                     item_data[f"{key}_length"] = st.text_input("丈(cm)", value=order.get(f"{key}_length") or "", key=f"l_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_p_{key}")
 
+                # 数量・サイズ・メモ
                 elif spec["type"] == "qty_size_memo":
                     s_opt = spec.get("size_options")
                     if isinstance(s_opt, dict) and "range" in s_opt:
@@ -129,10 +128,8 @@ if mode == "採寸入力":
                         size_choices = s_opt
 
                     current_size = order.get(f"{key}_size")
-                    try:
-                        s_idx = size_choices.index(current_size)
-                    except:
-                        s_idx = 0
+                    try: s_idx = size_choices.index(current_size)
+                    except: s_idx = 0
                     item_data[f"{key}_size"] = st.selectbox("サイズ", size_choices, index=s_idx, key=f"s_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_s_{key}")
 
@@ -141,16 +138,9 @@ if mode == "採寸入力":
                     try:
                         supabase.table("orders").update(item_data).eq("id", order["id"]).execute()
                         st.success(f"{display_name} の採寸データが更新されました ✅")
+                        st.experimental_rerun()  # ← 保存後にリロードして最新データ反映
                     except Exception as e:
                         st.error(f"{display_name} の保存に失敗しました: {e}")
-
-        # --- 全採寸完了ボタン ---
-        st.divider()
-        if st.button("全ての採寸を完了して確定する", type="primary"):
-            supabase.table("orders").update({"status": "measured"}).eq("id", order["id"]).execute()
-            st.session_state.edit_order = None
-            st.success("全ての採寸が完了しました！")
-            st.rerun()
 
 # ===============================
 # --- 6. 注文一覧モード ---
