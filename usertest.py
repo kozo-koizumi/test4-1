@@ -200,60 +200,46 @@ elif st.session_state.phase == "confirm":
 # --- 採寸待ち画面（数量変更可能） ---
 # ===============================
 #from streamlit_autorefresh import st_autorefresh
-
 elif st.session_state.phase == "complete":
-    order = (
-        supabase.table("orders")
-        .select("*")
-        .eq("id", st.session_state.order_id)
-        .single()
-        .execute()
-        .data
-    )
+    order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
 
-    # =========================
-    # 採寸完了チェック（最優先）
-    # =========================
-    if order["status"] == "measured":
-        st.session_state.phase = "final_confirm"
-        st.rerun()
+    st.title("採寸待ち（数量変更可）")
+    st.write(f"受付番号：{order['id']}")
 
-    # =========================
-    # 採寸待ち
-    # =========================
-    if order["status"] == "waiting":
-        # ← ★ここ！
-        #st_autorefresh(interval=3000, key="waiting_refresh")
+    # 数量変更用のエクスパンダー
+    with st.expander("数量を変更する"):
+        updated_items = {}
+        total_price = 0
 
-        st.title("採寸待ち（数量変更可）")
-        st.write(f"受付番号：{order['id']}")
-        st.info("採寸前であれば数量を変更できます。")
+        for key, info in products.items():
+            current_qty = order["items"].get(key, 0)
+            qty = st.selectbox(
+                info["label"],
+                options=list(range(11)),
+                index=current_qty,
+                key=f"wait_qty_{key}",
+            )
+            updated_items[key] = qty
+            total_price += qty * info["price"]
 
-        with st.expander("数量を変更する"):
-            updated_items = {}
-            total_price = 0
+        st.write(f"合計金額：¥{total_price:,}")
 
-            for key, info in products.items():
-                current_qty = order["items"].get(key, 0)
-                qty = st.selectbox(
-                    info["label"],
-                    options=list(range(11)),
-                    index=current_qty,
-                    key=f"wait_qty_{key}",
-                )
-                updated_items[key] = qty
-                total_price += qty * info["price"]
+        if st.button("この内容で数量を更新"):
+            supabase.table("orders").update({
+                "items": updated_items,
+                "total_price": total_price
+            }).eq("id", order["id"]).execute()
+            st.success("数量を更新しました")
+            st.rerun()
 
-            st.write(f"合計金額：¥{total_price:,}")
-
-            if st.button("この内容で数量を更新"):
-                supabase.table("orders").update({
-                    "items": updated_items,
-                    "total_price": total_price
-                }).eq("id", order["id"]).execute()
-
-                st.success("数量を更新しました")
-                st.rerun()
+    # 最新状態チェック用ボタン
+    if st.button("最新の状態を確認"):
+        order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
+        if order["status"] == "measured":
+            st.session_state.phase = "final_confirm"
+            st.rerun()
+        else:
+            st.info("まだ採寸は完了していません。")
 
     # =========================
     # 採寸完了
