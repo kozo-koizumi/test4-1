@@ -214,15 +214,18 @@ elif st.session_state.phase == "complete":
             updated_items[key] = qty
             total_price += qty * info["price"]
 
-        if st.button("数量を更新"):
-            supabase.table("orders").update({
-                "items": updated_items,
-                "total_price": total_price
-            }).eq("id", order["id"]).execute()
-            st.success("数量を更新しました")
-            st.rerun()
+    if st.button("この内容で確定"):
+        if order["status"] == "waiting":        
+            if st.button("数量を更新"):
+                supabase.table("orders").update({
+                    "items": updated_items,
+                    "total_price": total_price
+                }).eq("id", order["id"]).execute()
+                st.success("数量を更新しました")
+                st.rerun()
 
-    elif order["status"] == "measured":
+    if order["status"] == "measured":
+        st.info("採寸が完了しました。内容をご確認ください。")
         st.session_state.phase = "final_confirm"
         st.rerun()
 
