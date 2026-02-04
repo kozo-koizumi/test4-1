@@ -68,7 +68,7 @@ if mode == "採寸入力":
     if st.button("検索"):
         res = supabase.table("orders").select("*").eq("id", order_id_input).execute()
         if res.data and len(res.data) > 0:
-            st.session_state.edit_order = res.data[0] 
+            st.session_state.edit_order = res.data[0]
             st.rerun()
         else:
             st.error(f"受付番号 {order_id_input} は登録されていません。")
@@ -79,23 +79,23 @@ if mode == "採寸入力":
         order = st.session_state.edit_order
         st.subheader(f"注文者: {order.get('name')} 様")
 
-        # 各商品ごとの入力と保存
         items = order.get("items") or {}
+
+        # --- 各商品フォーム ---
         for key, spec in product_specs.items():
             try:
                 qty = int(items.get(key, 0))
-            except ValueError:
+            except:
                 qty = 0
-            
             if qty <= 0:
-                continue 
+                continue
 
             display_name = spec.get("label", key)
-        
+
             with st.container(border=True):
                 st.markdown(f"### 👕 {display_name}（数量：{qty}）")
                 item_data = {}
-    
+
                 if "types" in spec:
                     type_options = spec["types"]
                     current_type = order.get(f"{key}_type")
@@ -106,14 +106,16 @@ if mode == "採寸入力":
                     w_start, w_end, w_step = spec["waist_range"]
                     waist_options = list(range(w_start, w_end, w_step))
                     db_waist = order.get(f"{key}_waist")
-                    try: db_waist_val = int(float(db_waist))
-                    except: db_waist_val = waist_options[0]
-                
+                    try:
+                        db_waist_val = int(float(db_waist))
+                    except:
+                        db_waist_val = waist_options[0]
+
                     w_idx = waist_options.index(db_waist_val) if db_waist_val in waist_options else 0
                     item_data[f"{key}_waist"] = st.selectbox("ウエスト(cm)", waist_options, index=w_idx, key=f"w_{key}")
                     item_data[f"{key}_length"] = st.text_input("丈(cm)", value=order.get(f"{key}_length") or "", key=f"l_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_p_{key}")
-    
+
                 elif spec["type"] == "qty_size_memo":
                     s_opt = spec.get("size_options")
                     if isinstance(s_opt, dict) and "range" in s_opt:
@@ -125,14 +127,16 @@ if mode == "採寸入力":
                             curr += step
                     else:
                         size_choices = s_opt
-                    
+
                     current_size = order.get(f"{key}_size")
-                    try: s_idx = size_choices.index(current_size)
-                    except: s_idx = 0
+                    try:
+                        s_idx = size_choices.index(current_size)
+                    except:
+                        s_idx = 0
                     item_data[f"{key}_size"] = st.selectbox("サイズ", size_choices, index=s_idx, key=f"s_{key}")
                     item_data[f"{key}_memo"] = st.text_input("備考", value=order.get(f"{key}_memo") or "", key=f"m_s_{key}")
-    
-                # 一時保存
+
+                # 一時保存ボタン
                 if st.button(f"{display_name} を一時保存", key=f"btn_{key}"):
                     try:
                         supabase.table("orders").update(item_data).eq("id", order["id"]).execute()
@@ -140,14 +144,13 @@ if mode == "採寸入力":
                     except Exception as e:
                         st.error(f"{display_name} の保存に失敗しました: {e}")
 
-        # ← ここで全採寸完了ボタンも edit_order 内に入れる
+        # --- 全採寸完了ボタン ---
         st.divider()
         if st.button("全ての採寸を完了して確定する", type="primary"):
             supabase.table("orders").update({"status": "measured"}).eq("id", order["id"]).execute()
             st.session_state.edit_order = None
             st.success("全ての採寸が完了しました！")
             st.rerun()
-
 
 # ===============================
 # --- 6. 注文一覧モード ---
