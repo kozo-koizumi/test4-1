@@ -199,14 +199,13 @@ elif st.session_state.phase == "confirm":
 # ===============================
 # --- 採寸待ち画面（数量変更可能） ---
 # ===============================
-#from streamlit_autorefresh import st_autorefresh
 elif st.session_state.phase == "complete":
     order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
 
     st.title("採寸待ち（数量変更可）")
     st.write(f"受付番号：{order['id']}")
 
-    # 数量変更用のエクスパンダー
+    # 数量変更エクスパンダー
     with st.expander("数量を変更する"):
         updated_items = {}
         total_price = 0
@@ -232,29 +231,18 @@ elif st.session_state.phase == "complete":
             st.success("数量を更新しました")
             st.rerun()
 
-    # 最新状態チェック用ボタン
+    # 最新状態確認ボタン
     if st.button("最新の状態を確認"):
         order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
         if order["status"] == "measured":
-            st.session_state.phase = "final_confirm"
-            st.rerun()
+            st.success("採寸が完了しました！")
+            # 最終確認に進むボタンを表示
+            if st.button("最終確認へ進む"):
+                st.session_state.phase = "final_confirm"
+                st.rerun()
         else:
             st.info("まだ採寸は完了していません。")
 
-    # =========================
-    # 採寸完了
-    # =========================
-    elif order["status"] == "measured":
-        st.info("採寸が完了しました。内容をご確認ください。")
-        st.session_state.phase = "final_confirm"
-
-        # measured になったら一度だけ items を展開
-        items = order.get("items", {})
-        update_data = {k: items.get(k, 0) for k in products.keys()}
-
-        supabase.table("orders").update(update_data).eq("id", order["id"]).execute()
-
-        st.rerun()
 
 # ===============================
 # --- 最終確認 ---
