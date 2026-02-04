@@ -152,6 +152,7 @@ if st.session_state.phase == "input":
 # ===============================
 # --- 確認画面 ---
 # ===============================
+
 elif st.session_state.phase == "confirm":
     data = st.session_state.order_data
     st.title("注文内容の確認")
