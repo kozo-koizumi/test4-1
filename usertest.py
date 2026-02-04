@@ -230,21 +230,22 @@ elif st.session_state.phase == "complete":
             }).eq("id", order["id"]).execute()
             st.success("数量を更新しました")
             st.rerun()
-# 最新状態確認ボタン
-if st.button("最新の状態を確認"):
-    order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
-    if order["status"] == "measured":
-        st.session_state.measured_done = True  # セッションステートで完了を保持
-        st.success("採寸が完了しました！")
-    else:
-        st.info("まだ採寸は完了していません。")
 
-# 採寸完了していれば「最終確認へ進む」ボタンを常に表示
-if st.session_state.get("measured_done", False):
-    if st.button("最終確認へ進む"):
-        st.session_state.phase = "final_confirm"
-        st.rerun()
+    # 最新状態確認ボタン
+    if st.button("最新の状態を確認"):
+        order = supabase.table("orders").select("*").eq("id", st.session_state.order_id).single().execute().data
+        if order["status"] == "measured":
+            st.session_state.measured_done = True
+            st.success("採寸が完了しました！")
+        else:
+            st.info("まだ採寸は完了していません。")
 
+    # 採寸完了していれば「最終確認へ進む」ボタンを表示（complete フェーズ内だけ）
+    if st.session_state.get("measured_done", False):
+        if st.button("最終確認へ進む"):
+            st.session_state.phase = "final_confirm"
+            st.session_state.measured_done = False  # リセット
+            st.rerun()
 
 # ===============================
 # --- 最終確認 ---
